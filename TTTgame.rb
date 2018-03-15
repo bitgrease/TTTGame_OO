@@ -13,6 +13,10 @@ class Board
   def set_square_at(square_number, marker)
     @squares[square_number] = marker
   end
+
+  def square_available?(square_number)
+    @squares[square_number] == ' '
+  end
 end
 
 class Square
@@ -60,7 +64,7 @@ class TTTGame
 
   end
 
-  def display_board(board)
+  def display_board
     row_border = '     |     |'
     row_separator = '-----+-----+-----'
     puts ''
@@ -78,8 +82,9 @@ class TTTGame
     puts 'Choose a square between 1-9: '
     loop do
       square_number = gets.chomp.to_i
-      break if (1..9).include?(square_number)
-      puts "Sorry, that's not a valid choice"
+      break if (1..9).include?(square_number) && 
+        board.square_available?(square_number)
+      puts "Sorry, choice must be between 1 and 9 and the square must be empty."
     end
 
     human.mark_square(board, square_number)  
@@ -88,9 +93,9 @@ class TTTGame
   def play
     display_welcome_message
     loop do
-      display_board(board)
+      display_board
       human_moves
-      display_board(board) # temp
+      display_board # temp
       break
       break if someone_won? || board_full?
 
