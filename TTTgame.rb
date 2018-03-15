@@ -1,4 +1,3 @@
-require 'pry'
 class Board
   INITIAL_MARKER = ' '
   def initialize
@@ -81,9 +80,9 @@ class TTTGame
     row_border = '     |     |'
     row_separator = '-----+-----+-----'
     puts ''
-    [1,4,7].each do |row_start|
+    [1, 4, 7].each do |row_start|
       puts row_border
-      print_mid_row(row_start,board)
+      print_mid_row(row_start, board)
       puts row_border
       puts row_separator if row_start < 7
     end
@@ -94,12 +93,12 @@ class TTTGame
     # 1, 2, 3  4, 5, 6  7,8,9
     # 1, 4, 7  2, 5, 8  3, 6, 9
     # 1, 5, 9  3, 5, 7
-    winning_combos = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [1, 4, 7], 
+    winning_combos = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [1, 4, 7],
                       [2, 5, 8], [3, 6, 9], [1, 5, 9], [3, 5, 7]]
 
     winning_combos.any? do |combo|
       combo.all? { |key| board.get_square_at(key) == HUMAN_MARKER } ||
-      combo.all? { |key| board.get_square_at(key) == COMPUTER_MARKER }
+        combo.all? { |key| board.get_square_at(key) == COMPUTER_MARKER }
     end
   end
 
@@ -108,19 +107,19 @@ class TTTGame
     puts 'Choose a square between 1-9: '
     loop do
       square_number = gets.chomp.to_i
-      break if (1..9).include?(square_number) && 
-        board.square_available?(square_number)
+      break if (1..9).cover?(square_number) &&
+               board.square_available?(square_number)
       puts "Sorry, choice must be between 1 and 9 and the square must be empty."
     end
 
-    human.mark_square(board, square_number)  
+    human.mark_square(board, square_number)
   end
 
   def computer_moves
     computer.mark_square(board, board.random_empty_square)
   end
 
-  def get_winner_and_display_result
+  def find_winner_and_display_result
     if board.num_of_mark(HUMAN_MARKER) > board.num_of_mark(COMPUTER_MARKER)
       puts "Human won!"
     else
@@ -146,7 +145,7 @@ class TTTGame
     end
     clear_screen
     display_board
-    get_winner_and_display_result
+    find_winner_and_display_result
     display_goodbye_message
   end
 end
