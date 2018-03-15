@@ -17,6 +17,18 @@ class Board
   def square_available?(square_number)
     @squares[square_number] == ' '
   end
+
+  def random_empty_square
+    @squares.keys.select { |key| @squares[key] == INITIAL_MARKER }.sample
+  end
+
+  def full?
+    !@squares.values.include?(INITIAL_MARKER)
+  end
+
+  def num_of_mark(marker)
+    @squares.values.count(marker)
+  end
 end
 
 class Square
@@ -41,11 +53,13 @@ class Player
 end
 
 class TTTGame
+  HUMAN_MARKER = 'X'
+  COMPUTER_MARKER = 'O'
   attr_reader :board, :human, :computer
   def initialize
     @board = Board.new
-    @human = Player.new('X')
-    @computer = Player.new('O')
+    @human = Player.new(HUMAN_MARKER)
+    @computer = Player.new(COMPUTER_MARKER)
   end
 
   def display_welcome_message
@@ -61,7 +75,6 @@ class TTTGame
     print "  #{board.get_square_at(starting_square)}  |"
     print "  #{board.get_square_at(starting_square + 1)}  |"
     puts "  #{board.get_square_at(starting_square + 2)}"
-
   end
 
   def display_board
@@ -77,6 +90,19 @@ class TTTGame
     puts ''
   end
 
+  def someone_won?
+    # 1, 2, 3  4, 5, 6  7,8,9
+    # 1, 4, 7  2, 5, 8  3, 6, 9
+    # 1, 5, 9  3, 5, 7
+    winning_combos = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [1, 4, 7], 
+                      [2, 5, 8], [3, 6, 9], [1, 5, 9], [3, 5, 7]]
+
+    winning_combos.any? do |combo|
+      combo.all? { |key| board.get_square_at(key) == HUMAN_MARKER } ||
+      combo.all? { |key| board.get_square_at(key) == COMPUTER_MARKER }
+    end
+  end
+
   def human_moves
     square_number = nil
     puts 'Choose a square between 1-9: '
@@ -90,19 +116,37 @@ class TTTGame
     human.mark_square(board, square_number)  
   end
 
+  def computer_moves
+    computer.mark_square(board, board.random_empty_square)
+  end
+
+  def get_winner_and_display_result
+    if board.num_of_mark(HUMAN_MARKER) > board.num_of_mark(COMPUTER_MARKER)
+      puts "Human won!"
+    else
+      puts "Computer won."
+    end
+  end
+
+  def clear_screen
+    system('cls') || system('clear')
+  end
+
   def play
+    clear_screen
     display_welcome_message
     loop do
       display_board
       human_moves
-      display_board # temp
-      break
-      break if someone_won? || board_full?
+      break if someone_won? || board.full?
 
       computer_moves
-      break if someone_won? || board_full?
+      break if someone_won? || board.full?
+      clear_screen
     end
-    # display_result
+    clear_screen
+    display_board
+    get_winner_and_display_result
     display_goodbye_message
   end
 end
