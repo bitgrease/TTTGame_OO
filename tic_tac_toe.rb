@@ -4,7 +4,7 @@ class Board
                       [2, 5, 8], [3, 6, 9], [1, 5, 9], [3, 5, 7]]
   def initialize
     @squares = {}
-    (1..9).each { |key| @squares[key] = Square.new }
+    reset
   end
 
   def get_square_at(space)
@@ -39,6 +39,12 @@ class Board
     WINNING_COMBOS.any? do |combo|
       combo.all? { |key| get_square_at(key).marker == marker }
     end
+  end
+
+  def reset
+   for n in 1..9
+     @squares.store(n, Square.new)
+   end 
   end
 end
 
@@ -99,8 +105,8 @@ class TTTGame
     puts "#{row_start}    |#{row_start + 1}    |#{row_start + 2}"
   end
 
-  def display_board
-    clear_screen
+  def display_board(clear=true)
+    clear_screen if clear
     puts "You are #{HUMAN_MARKER}. Computer is #{COMPUTER_MARKER}"
     row_separator = '-----+-----+-----'
     row_bottom_border = '     |     |'
@@ -147,21 +153,43 @@ class TTTGame
     system('cls') || system('clear')
   end
 
-  def play
-    display_welcome_message
-    display_board
+  def play_again?
+    answer = nil
     loop do
-      human_moves
-      break if board.someone_won? || board.full?
-
-      computer_moves
-      break if board.someone_won? || board.full?
-      display_board
+      print 'Do you want to play again (y/n)? '
+      answer = gets.chomp.downcase
+      break if %w[y n].include?(answer)
+      puts 'You must answer with a y or n.'
     end
-    display_board
-    find_winner_and_display_result
-    display_goodbye_message
+
+    answer == 'y'
   end
+
+  def play
+    clear_screen
+    display_welcome_message
+
+    loop do
+      display_board(false)
+      loop do
+        human_moves
+        break if board.someone_won? || board.full?
+
+        computer_moves
+        break if board.someone_won? || board.full?
+        display_board
+      end
+
+      display_board
+      find_winner_and_display_result
+      break unless play_again?
+      board.reset
+      clear_screen
+      puts "Let's play again!\n"
+    end
+
+    display_goodbye_message
+    end
 end
 
 game = TTTGame.new
