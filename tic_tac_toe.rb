@@ -32,7 +32,7 @@ class Board
   end
 
   def someone_won?
-    winner?(Square::HUMAN_MARKER) || winner?(Square::COMPUTER_MARKER)
+    winner?(TTTGame::HUMAN_MARKER) || winner?(TTTGame::COMPUTER_MARKER)
   end
 
   def winner?(marker)
@@ -44,8 +44,7 @@ end
 
 class Square
   INITIAL_MARKER = ' '
-  HUMAN_MARKER = 'X'
-  COMPUTER_MARKER = 'O'
+
   attr_accessor :marker
   def initialize(marker=INITIAL_MARKER)
     @marker = marker
@@ -72,11 +71,13 @@ class Player
 end
 
 class TTTGame
+  HUMAN_MARKER = 'X'
+  COMPUTER_MARKER = 'O'
   attr_reader :board, :human, :computer
   def initialize
     @board = Board.new
-    @human = Player.new(Square::HUMAN_MARKER)
-    @computer = Player.new(Square::COMPUTER_MARKER)
+    @human = Player.new(HUMAN_MARKER)
+    @computer = Player.new(COMPUTER_MARKER)
   end
 
   def display_welcome_message
@@ -100,7 +101,7 @@ class TTTGame
 
   def display_board
     clear_screen
-    puts "You are #{Square::HUMAN_MARKER}. Computer is #{Square::COMPUTER_MARKER}"
+    puts "You are #{HUMAN_MARKER}. Computer is #{COMPUTER_MARKER}"
     row_separator = '-----+-----+-----'
     row_bottom_border = '     |     |'
     puts ''
@@ -133,9 +134,9 @@ class TTTGame
   end
 
   def find_winner_and_display_result
-    if board.winner?(Square::HUMAN_MARKER)
-      puts "Human won!"
-    elsif board.winner?(Square::COMPUTER_MARKER)
+    if board.winner?(HUMAN_MARKER)
+      puts "You won!"
+    elsif board.winner?(COMPUTER_MARKER)
       puts "Computer won."
     else
       puts "It's a TIE."
