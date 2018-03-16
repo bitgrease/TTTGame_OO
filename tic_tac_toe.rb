@@ -1,9 +1,10 @@
 require 'pry'
 class Board
-  INITIAL_MARKER = ' '
+  WINNING_COMBOS = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [1, 4, 7],
+                      [2, 5, 8], [3, 6, 9], [1, 5, 9], [3, 5, 7]]
   def initialize
     @squares = {}
-    (1..9).each { |key| @squares[key] = Square.new(INITIAL_MARKER) }
+    (1..9).each { |key| @squares[key] = Square.new }
   end
 
   def get_square_at(space)
@@ -19,21 +20,34 @@ class Board
   end
 
   def full?
-    @squares.none? { |_, square| square.unmarked? }
+    unmarked_keys.empty?
   end
 
   def num_of_mark(player_mark)
-    @squares.count { |_, square| square.marker == player_mark}
+    @squares.count { |_, square| square.marker == player_mark }
   end
 
   def unmarked_keys
     @squares.keys.select { |key| @squares[key].unmarked? }
   end
+
+  def someone_won?
+    winner?(Square::HUMAN_MARKER) || winner?(Square::COMPUTER_MARKER)
+  end
+
+  def winner?(marker)
+    WINNING_COMBOS.any? do |combo|
+      combo.all? { |key| get_square_at(key).marker == marker }
+    end
+  end
 end
 
 class Square
+  INITIAL_MARKER = ' '
+  HUMAN_MARKER = 'X'
+  COMPUTER_MARKER = 'O'
   attr_accessor :marker
-  def initialize(marker)
+  def initialize(marker=INITIAL_MARKER)
     @marker = marker
   end
 
@@ -42,7 +56,7 @@ class Square
   end
 
   def unmarked?
-    @marker == Board::INITIAL_MARKER
+    @marker == INITIAL_MARKER
   end
 end
 
@@ -58,13 +72,11 @@ class Player
 end
 
 class TTTGame
-  HUMAN_MARKER = 'X'
-  COMPUTER_MARKER = 'O'
   attr_reader :board, :human, :computer
   def initialize
     @board = Board.new
-    @human = Player.new(HUMAN_MARKER)
-    @computer = Player.new(COMPUTER_MARKER)
+    @human = Player.new(Square::HUMAN_MARKER)
+    @computer = Player.new(Square::COMPUTER_MARKER)
   end
 
   def display_welcome_message
@@ -86,13 +98,13 @@ class TTTGame
     puts "#{row_start}    |#{row_start + 1}    |#{row_start + 2}"
   end
 
-
   def display_board
+    clear_screen
+    puts "You are #{Square::HUMAN_MARKER}. Computer is #{Square::COMPUTER_MARKER}"
     row_separator = '-----+-----+-----'
     row_bottom_border = '     |     |'
     puts ''
     [1, 4, 7].each do |row_start|
-      
       puts row_bottom_border
       print_mid_row(row_start, board)
       print_top_border_with_key(row_start)
@@ -101,30 +113,17 @@ class TTTGame
     puts ''
   end
 
-  def someone_won?
-    # 1, 2, 3  4, 5, 6  7,8,9
-    # 1, 4, 7  2, 5, 8  3, 6, 9
-    # 1, 5, 9  3, 5, 7
-    winning_combos = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [1, 4, 7],
-                      [2, 5, 8], [3, 6, 9], [1, 5, 9], [3, 5, 7]]
-
-    winning_combos.any? do |combo|
-      combo.all? { |key| board.get_square_at(key).marker == HUMAN_MARKER } ||
-        combo.all? { |key| board.get_square_at(key).marker == COMPUTER_MARKER }
-    end
-  end
-
   def human_moves
     square_number = nil
-    puts "Select a square from one of the available spaces."
-    print "Choose one: #{board.unmarked_keys}: "
+    available_keys_formatted = board.unmarked_keys.join(' ,')
+    print "Select a square from one of the available spaces.\n" \
+          "(#{available_keys_formatted}): "
     loop do
       square_number = gets.chomp.to_i
       break if board.unmarked_keys.include?(square_number)
-      puts "Invalid choice. Please try again."
-      print "Choose one:#{board.unmarked_keys}: "
+      print "Invalid choice. Please try again\n" \
+           "Choose one (#{available_keys_formatted}): "
     end
-
 
     human.mark_square(board, square_number)
   end
@@ -133,19 +132,10 @@ class TTTGame
     computer.mark_square(board, board.unmarked_keys.sample)
   end
 
-  def winner?(player)
-    winning_combos = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [1, 4, 7],
-                      [2, 5, 8], [3, 6, 9], [1, 5, 9], [3, 5, 7]]
-
-    winning_combos.any? do |combo|
-      combo.all? { |key| board.get_square_at(key).marker == player.marker }
-    end
-  end
-
   def find_winner_and_display_result
-    if winner?(human)
+    if board.winner?(Square::HUMAN_MARKER)
       puts "Human won!"
-    elsif winner?(computer)
+    elsif board.winner?(Square::COMPUTER_MARKER)
       puts "Computer won."
     else
       puts "It's a TIE."
@@ -157,19 +147,16 @@ class TTTGame
   end
 
   def play
-    clear_screen
     display_welcome_message
     display_board
     loop do
       human_moves
-      break if someone_won? || board.full?
+      break if board.someone_won? || board.full?
 
       computer_moves
-      break if someone_won? || board.full?
-      clear_screen
+      break if board.someone_won? || board.full?
       display_board
     end
-    clear_screen
     display_board
     find_winner_and_display_result
     display_goodbye_message
@@ -177,4 +164,5 @@ class TTTGame
 end
 
 game = TTTGame.new
+system('cls') || system('clear')
 game.play
