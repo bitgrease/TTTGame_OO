@@ -102,10 +102,39 @@ class TTTGame
   def print_top_border_with_key(row_start)
     puts "#{row_start}    |#{row_start + 1}    |#{row_start + 2}"
   end
-
-  def display_board(clear=true)
-    clear_screen if clear
+# 
+#   def display_board(options={clear_screen: true})
+#     clear_screen if options[:clear_screen]
+#     puts "You are #{HUMAN_MARKER}. Computer is #{COMPUTER_MARKER}"
+#     row_separator = '-----+-----+-----'
+#     row_bottom_border = '     |     |'
+#     puts ''
+#     [1, 4, 7].each do |row_start|
+#       puts row_bottom_border
+#       print_mid_row(row_start, board)
+#       print_top_border_with_key(row_start)
+#       puts row_separator if row_start < 7
+#     end
+#     puts ''
+#   end
+  
+  def display_board
     puts "You are #{HUMAN_MARKER}. Computer is #{COMPUTER_MARKER}"
+    row_separator = '-----+-----+-----'
+    row_bottom_border = '     |     |'
+    puts ''
+    [1, 4, 7].each do |row_start|
+      puts row_bottom_border
+      print_mid_row(row_start, board)
+      print_top_border_with_key(row_start)
+      puts row_separator if row_start < 7
+    end
+    puts ''
+  end
+  
+  def clear_screen_and_display_board
+  	clear_screen
+  	puts "You are #{HUMAN_MARKER}. Computer is #{COMPUTER_MARKER}"
     row_separator = '-----+-----+-----'
     row_bottom_border = '     |     |'
     puts ''
@@ -168,17 +197,17 @@ class TTTGame
     display_welcome_message
 
     loop do
-      display_board(false)
+      display_board
       loop do
         human_moves
         break if board.someone_won? || board.full?
 
         computer_moves
         break if board.someone_won? || board.full?
-        display_board
+        clear_screen_and_display_board
       end
 
-      display_board
+      clear_screen_and_display_board
       find_winner_and_display_result
       break unless play_again?
       board.reset
