@@ -134,17 +134,7 @@ class TTTGame
   
   def clear_screen_and_display_board
   	clear_screen
-  	puts "You are #{HUMAN_MARKER}. Computer is #{COMPUTER_MARKER}"
-    row_separator = '-----+-----+-----'
-    row_bottom_border = '     |     |'
-    puts ''
-    [1, 4, 7].each do |row_start|
-      puts row_bottom_border
-      print_mid_row(row_start, board)
-      print_top_border_with_key(row_start)
-      puts row_separator if row_start < 7
-    end
-    puts ''
+  	display_board
   end
 
   def human_moves
@@ -191,6 +181,16 @@ class TTTGame
 
     answer == 'y'
   end
+  
+  def reset
+  	board.reset
+  	clear_screen	
+  end
+  
+  def display_play_again_message
+  	puts "Let's play again!"
+  	puts ''
+  end
 
   def play
     clear_screen
@@ -210,9 +210,8 @@ class TTTGame
       clear_screen_and_display_board
       find_winner_and_display_result
       break unless play_again?
-      board.reset
-      clear_screen
-      puts "Let's play again!\n"
+      reset
+      display_play_again_message
     end
 
     display_goodbye_message
