@@ -1,4 +1,26 @@
 require 'pry'
+
+class Scoreboard
+  def initialize(player_one_name, player_two_name, winning_score)
+    @players_and_scores = { player_one_name => 0,
+                            player_two_name => 0
+                          }
+    @winning_score = winning_score
+  end
+
+  def add_point(player_name)
+    @players_and_scores[player_name] += 1
+  end
+
+  def match_winner?
+    @players_and_scores.has_value?(@winning_score)
+  end
+
+  def winner_name
+    @players_and_scores.rassoc(@winning_score).first
+  end
+end
+
 class Board
   WINNING_COMBOS = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [1, 4, 7],
                     [2, 5, 8], [3, 6, 9], [1, 5, 9], [3, 5, 7]]
@@ -99,9 +121,25 @@ class Square
 end
 
 class Player
-  attr_reader :marker
-  def initialize(marker)
+  attr_reader :marker, :name
+  def initialize(marker, player_type={human: false})
     @marker = marker
+    if player_type[:human]
+      set_name
+    else
+      @name = 'Computer'
+    end
+  end
+
+  def set_name
+    name = nil
+    loop do
+      print "What's your name?: "
+      name = gets.chomp
+      break unless name =~ /[^a-z|0-9]/i || name.empty?
+      puts "Sorry, you must enter a valid name (alphanumeric chars only)."
+    end
+    @name = name
   end
 
   def mark_square(board, square_number)
@@ -115,9 +153,10 @@ class TTTGame
   attr_reader :board, :human, :computer, :current_player
   def initialize
     @board = Board.new
-    @human = Player.new(HUMAN_MARKER)
+    @human = Player.new(HUMAN_MARKER, {human: true})
     @computer = Player.new(COMPUTER_MARKER)
     @current_player = @human
+    @scoreboard = Scoreboard.new(human.name, 'Computer', 5)
   end
 
   def play
@@ -154,7 +193,7 @@ class TTTGame
   end
 
   def display_board
-    puts "You are #{HUMAN_MARKER}. Computer is #{COMPUTER_MARKER}."
+    puts "#{human.name} is #{HUMAN_MARKER}. Computer is #{COMPUTER_MARKER}."
     board.draw
     puts ''
   end
@@ -182,7 +221,7 @@ class TTTGame
   def human_moves
     square_number = nil
     print "Select a square from one of the available spaces.\n" \
-          "(#{joinor(board.formatted_unmarked_keys)}): "
+          "(#{joinor(board.unmarked_keys)}): "
     loop do
       square_number = gets.chomp.to_i
       break if board.unmarked_keys.include?(square_number)
