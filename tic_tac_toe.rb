@@ -131,7 +131,6 @@ class TTTGame
         clear_screen_and_display_board if human_turn?
       end
 
-      clear_screen_and_display_board
       find_winner_and_display_result
       break unless play_again?
       reset
@@ -187,6 +186,7 @@ class TTTGame
   end
 
   def find_winner_and_display_result
+    clear_screen_and_display_board
     case board.winning_marker
     when HUMAN_MARKER then puts "You won!"
     when COMPUTER_MARKER then puts "Computer won!"
