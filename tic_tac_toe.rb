@@ -19,6 +19,10 @@ class Scoreboard
   def winner_name
     @players_and_scores.rassoc(@winning_score).first
   end
+
+  def reset
+    @players_and_scores.each { |k, _| @players_and_scores[k] = 0 }
+  end
 end
 
 class Board
@@ -160,24 +164,27 @@ class TTTGame
   end
 
   def play
-    binding.pry
     clear_screen
     display_welcome_message
-
     loop do
-      display_board
       loop do
-        current_player_moves
-        break if someone_won? || board.full?
-        clear_screen_and_display_board if human_turn?
+        display_board
+        loop do
+          current_player_moves
+          break if someone_won? || board.full?
+          clear_screen_and_display_board if human_turn?
+        end
+
+        find_winner_and_display_result
+        break unless play_again? || match_won?
+        reset
+        display_play_again_message
       end
 
-      find_winner_and_display_result
+      display_match_score_and_winner
       break unless play_again?
-      reset
-      display_play_again_message
+      reset_match_scores
     end
-
     display_goodbye_message
   end
 
@@ -286,8 +293,24 @@ class TTTGame
   def human_turn?
     current_player.marker == HUMAN_MARKER
   end
+
+  def match_won?
+    scoreboard.match_winner?
+  end
+
+  def display_match_score_and_winner
+    puts 'The final score was: '
+    scoreboard.each do |player, score|
+      puts "\t#{player}: #{score}"
+    end
+    puts "#{scoreboard.winner_name} wins!"
+  end
+
+  def reset_match_scores
+    scoreboard.reset
+  end
 end
 
-game = TTTGame.new
 system('cls') || system('clear')
+game = TTTGame.new
 game.play
