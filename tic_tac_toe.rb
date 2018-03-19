@@ -166,16 +166,24 @@ class TTTGame
     display_board
   end
 
+  def formatted_unmarked_keys
+    available_keys = board.unmarked_keys
+    if available_keys.size > 1
+      available_keys[0..-2].join(', ') << ' or ' << available_keys.last.to_s
+    else
+      available_keys.pop
+    end
+  end
+
   def human_moves
     square_number = nil
-    available_keys_formatted = board.unmarked_keys.join(' ,')
     print "Select a square from one of the available spaces.\n" \
-          "(#{available_keys_formatted}): "
+          "(#{formatted_unmarked_keys}): "
     loop do
       square_number = gets.chomp.to_i
       break if board.unmarked_keys.include?(square_number)
       print "Invalid choice. Please try again\n" \
-           "Choose one (#{available_keys_formatted}): "
+           "Choose from the available spaces (#{formatted_unmarked_keys}): "
     end
 
     human.mark_square(board, square_number)
