@@ -1,3 +1,4 @@
+require 'pry'
 class Board
   WINNING_COMBOS = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [1, 4, 7],
                     [2, 5, 8], [3, 6, 9], [1, 5, 9], [3, 5, 7]]
@@ -120,6 +121,7 @@ class TTTGame
   end
 
   def play
+    binding.pry
     clear_screen
     display_welcome_message
 
@@ -166,24 +168,26 @@ class TTTGame
     display_board
   end
 
-  def formatted_unmarked_keys
-    available_keys = board.unmarked_keys
-    if available_keys.size > 1
-      available_keys[0..-2].join(', ') << ' or ' << available_keys.last.to_s
+  def joinor(numbers, separator=', ', join_word='or')
+    case numbers.size
+    when 0 then ''
+    when 1 then numbers.first
+    when 2 then numbers.join(" #{join_word} ")
     else
-      available_keys.pop
+      numbers[-1] = "#{join_word} #{numbers.last}"
+      numbers.join(separator)
     end
   end
 
   def human_moves
     square_number = nil
     print "Select a square from one of the available spaces.\n" \
-          "(#{formatted_unmarked_keys}): "
+          "(#{joinor(board.formatted_unmarked_keys)}): "
     loop do
       square_number = gets.chomp.to_i
       break if board.unmarked_keys.include?(square_number)
       print "Invalid choice. Please try again\n" \
-           "Choose from the available spaces (#{formatted_unmarked_keys}): "
+           "Choose from the following list (#{joinor(board.unmarked_keys)}): "
     end
 
     human.mark_square(board, square_number)
