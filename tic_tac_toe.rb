@@ -1,18 +1,15 @@
-require 'pry'
 class Board
   WINNING_COMBOS = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [1, 4, 7],
                     [2, 5, 8], [3, 6, 9], [1, 5, 9], [3, 5, 7]]
+  ROW_START_INDEXES = [1, 4, 7]
+
   def initialize
     @squares = {}
     reset
   end
 
-  def get_square_at(space)
-    @squares[space]
-  end
-
-  def set_square_at(square_number, marker)
-    @squares[square_number].marker = marker
+  def []=(square_location, marker)
+    @squares[square_location].marker = marker
   end
 
   def square_available?(square_number)
@@ -32,17 +29,50 @@ class Board
   end
 
   def someone_won?
-    winner?(TTTGame::HUMAN_MARKER) || winner?(TTTGame::COMPUTER_MARKER)
+    !!winner
   end
 
-  def winner?(marker)
-    WINNING_COMBOS.any? do |combo|
-      combo.all? { |key| get_square_at(key).marker == marker }
+  def winning_marker
+    WINNING_COMBOS.each do |combo|
+      squares = @squares.values_at(*combo)
+      if three_identical_markers?(squares)
+        return squares.first.marker
+      end
+    end
+    nil
+  end
+
+  def draw
+    row_separator = '-----+-----+-----'
+    row_bottom_border = '     |     |'
+    ROW_START_INDEXES.each do |row_start|
+      puts row_bottom_border
+      print_mid_row(row_start)
+      print_top_border_with_key(row_start)
+      puts row_separator if row_start < ROW_START_INDEXES.last
     end
   end
 
   def reset
     (1..9).each { |n| @squares.store(n, Square.new) }
+  end
+
+  private
+
+  def three_identical_markers?(squares)
+    markers = squares.select(&:marked?).collect(&:marker)
+    return false if markers.size != 3
+    markers.uniq.size == 1
+  end
+
+  def print_mid_row(starting_square)
+    print "  #{@squares[starting_square]}  |"
+    print "  #{@squares[starting_square + 1]}  |"
+    puts "  #{@squares[starting_square + 2]}"
+  end
+
+  def print_top_border_with_key(row_start)
+    puts "#{row_start}    |#{row_start + 1}    |#{row_start + 2}"
   end
 end
 
@@ -61,6 +91,10 @@ class Square
   def unmarked?
     @marker == INITIAL_MARKER
   end
+
+  def marked?
+    !unmarked?
+  end
 end
 
 class Player
@@ -70,19 +104,44 @@ class Player
   end
 
   def mark_square(board, square_number)
-    board.set_square_at(square_number, marker)
+    board[square_number] = marker
   end
 end
 
 class TTTGame
   HUMAN_MARKER = 'X'
   COMPUTER_MARKER = 'O'
-  attr_reader :board, :human, :computer
+  attr_reader :board, :human, :computer, :current_player
   def initialize
     @board = Board.new
     @human = Player.new(HUMAN_MARKER)
     @computer = Player.new(COMPUTER_MARKER)
+    @current_player = @human
   end
+
+  def play
+    clear_screen
+    display_welcome_message
+
+    loop do
+      display_board
+      loop do
+        current_player_moves
+        break if someone_won? || board.full?
+        clear_screen_and_display_board if human_turn?
+      end
+
+      clear_screen_and_display_board
+      find_winner_and_display_result
+      break unless play_again?
+      reset
+      display_play_again_message
+    end
+
+    display_goodbye_message
+  end
+
+  private
 
   def display_welcome_message
     puts 'Welcome to Tic Tac Toe!'
@@ -93,48 +152,19 @@ class TTTGame
     puts 'Thanks for playing Tic Tac Toe! Goodbye!'
   end
 
-  def print_mid_row(starting_square, board)
-    print "  #{board.get_square_at(starting_square)}  |"
-    print "  #{board.get_square_at(starting_square + 1)}  |"
-    puts "  #{board.get_square_at(starting_square + 2)}"
+  def display_board
+    puts "You are #{HUMAN_MARKER}. Computer is #{COMPUTER_MARKER}."
+    board.draw
+    puts ''
   end
 
-  def print_top_border_with_key(row_start)
-    puts "#{row_start}    |#{row_start + 1}    |#{row_start + 2}"
+  def someone_won?
+    !!board.winning_marker
   end
-# 
-#   def display_board(options={clear_screen: true})
-#     clear_screen if options[:clear_screen]
-#     puts "You are #{HUMAN_MARKER}. Computer is #{COMPUTER_MARKER}"
-#     row_separator = '-----+-----+-----'
-#     row_bottom_border = '     |     |'
-#     puts ''
-#     [1, 4, 7].each do |row_start|
-#       puts row_bottom_border
-#       print_mid_row(row_start, board)
-#       print_top_border_with_key(row_start)
-#       puts row_separator if row_start < 7
-#     end
-#     puts ''
-#   end
-  
-  def display_board
-    puts "You are #{HUMAN_MARKER}. Computer is #{COMPUTER_MARKER}"
-    row_separator = '-----+-----+-----'
-    row_bottom_border = '     |     |'
-    puts ''
-    [1, 4, 7].each do |row_start|
-      puts row_bottom_border
-      print_mid_row(row_start, board)
-      print_top_border_with_key(row_start)
-      puts row_separator if row_start < 7
-    end
-    puts ''
-  end
-  
+
   def clear_screen_and_display_board
-  	clear_screen
-  	display_board
+    clear_screen
+    display_board
   end
 
   def human_moves
@@ -157,10 +187,9 @@ class TTTGame
   end
 
   def find_winner_and_display_result
-    if board.winner?(HUMAN_MARKER)
-      puts "You won!"
-    elsif board.winner?(COMPUTER_MARKER)
-      puts "Computer won."
+    case board.winning_marker
+    when HUMAN_MARKER then puts "You won!"
+    when COMPUTER_MARKER then puts "Computer won!"
     else
       puts "It's a TIE."
     end
@@ -181,40 +210,30 @@ class TTTGame
 
     answer == 'y'
   end
-  
+
   def reset
-  	board.reset
-  	clear_screen	
-  end
-  
-  def display_play_again_message
-  	puts "Let's play again!"
-  	puts ''
-  end
-
-  def play
+    board.reset
+    @current_player = human
     clear_screen
-    display_welcome_message
+  end
 
-    loop do
-      display_board
-      loop do
-        human_moves
-        break if board.someone_won? || board.full?
+  def display_play_again_message
+    puts "Let's play again!"
+    puts ''
+  end
 
-        computer_moves
-        break if board.someone_won? || board.full?
-        clear_screen_and_display_board
-      end
-
-      clear_screen_and_display_board
-      find_winner_and_display_result
-      break unless play_again?
-      reset
-      display_play_again_message
+  def current_player_moves
+    if human_turn?
+      human_moves
+      @current_player = computer
+    else
+      computer_moves
+      @current_player = human
     end
+  end
 
-    display_goodbye_message
+  def human_turn?
+    current_player.marker == HUMAN_MARKER
   end
 end
 
