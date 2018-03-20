@@ -1,27 +1,22 @@
 require 'pry'
 
-class Scoreboard
-  def initialize(player_one_name, player_two_name, winning_score)
-    @players_and_scores = { player_one_name => 0,
-                            player_two_name => 0
-                          }
+class Scorecard
+  attr_accessor :score
+  def initialize(winning_score)
+    @score = 0
     @winning_score = winning_score
   end
 
-  def add_point(player_name)
-    @players_and_scores[player_name] += 1
+  def add_point
+    self.score += 1
   end
 
-  def match_winner?
-    @players_and_scores.has_value?(@winning_score)
-  end
-
-  def winner_name
-    @players_and_scores.rassoc(@winning_score).first
+  def winner?
+    score == @winning_score
   end
 
   def reset
-    @players_and_scores.each { |k, _| @players_and_scores[k] = 0 }
+    self.score = 0
   end
 end
 
@@ -125,7 +120,7 @@ class Square
 end
 
 class Player
-  attr_reader :marker, :name
+  attr_reader :marker, :name, :scorecard
   def initialize(marker, player_type={human: false})
     @marker = marker
     if player_type[:human]
@@ -133,6 +128,8 @@ class Player
     else
       @name = 'Computer'
     end
+
+    @scorecard = Scorecard.new(5)
   end
 
   def set_name
@@ -160,7 +157,6 @@ class TTTGame
     @human = Player.new(HUMAN_MARKER, {human: true})
     @computer = Player.new(COMPUTER_MARKER)
     @current_player = @human
-    @scoreboard = Scoreboard.new(human.name, 'Computer', 5)
   end
 
   def play
@@ -169,14 +165,11 @@ class TTTGame
     loop do
       loop do
         display_board
-        loop do
-          current_player_moves
-          break if someone_won? || board.full?
-          clear_screen_and_display_board if human_turn?
-        end
-
+        single_game
         find_winner_and_display_result
+        update_winner_scorecard
         break unless play_again? || match_won?
+        binding.pry
         reset
         display_play_again_message
       end
@@ -189,6 +182,14 @@ class TTTGame
   end
 
   private
+
+  def single_game
+    loop do
+      current_player_moves
+      break if someone_won? || board.full?
+      clear_screen_and_display_board if human_turn?
+    end
+  end
 
   def display_welcome_message
     puts 'Welcome to Tic Tac Toe!'
@@ -253,6 +254,13 @@ class TTTGame
     end
   end
 
+  def update_winner_scorecard
+    case board.winning_marker
+    when HUMAN_MARKER then human.scorecard.add_point
+    when COMPUTER_MARKER then computer.scorecard.add_point
+    end
+  end
+
   def clear_screen
     system('cls') || system('clear')
   end
@@ -295,7 +303,7 @@ class TTTGame
   end
 
   def match_won?
-    scoreboard.match_winner?
+    human.scorecard.winner? || computer.scorecard.winner?
   end
 
   def display_match_score_and_winner
