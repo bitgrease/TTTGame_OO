@@ -21,8 +21,6 @@ class Scorecard
 end
 
 class Board
-  WINNING_COMBOS = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [1, 4, 7],
-                    [2, 5, 8], [3, 6, 9], [1, 5, 9], [3, 5, 7]]
   ROW_START_INDEXES = [1, 4, 7]
 
   def initialize
@@ -32,6 +30,10 @@ class Board
 
   def []=(square_location, marker)
     @squares[square_location].marker = marker
+  end
+
+  def values_at(pos1, pos2, pos3)
+    @squares.values_at(pos1, pos2, pos3)
   end
 
   def square_available?(square_number)
@@ -54,16 +56,6 @@ class Board
     !!winner
   end
 
-  def winning_marker
-    WINNING_COMBOS.each do |combo|
-      squares = @squares.values_at(*combo)
-      if three_identical_markers?(squares)
-        return squares.first.marker
-      end
-    end
-    nil
-  end
-
   def draw
     row_separator = '-----+-----+-----'
     row_bottom_border = '     |     |'
@@ -79,13 +71,13 @@ class Board
     (1..9).each { |n| @squares.store(n, Square.new) }
   end
 
-  private
-
   def three_identical_markers?(squares)
     markers = squares.select(&:marked?).collect(&:marker)
     return false if markers.size != 3
     markers.uniq.size == 1
   end
+
+  private
 
   def print_mid_row(starting_square)
     print "  #{@squares[starting_square]}  |"
@@ -167,6 +159,8 @@ end
 class TTTGame
   HUMAN_MARKER = 'X'
   COMPUTER_MARKER = 'O'
+  WINNING_COMBOS = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [1, 4, 7],
+                    [2, 5, 8], [3, 6, 9], [1, 5, 9], [3, 5, 7]]
   attr_reader :board, :human, :computer, :current_player
   def initialize
     @board = Board.new
@@ -226,7 +220,7 @@ class TTTGame
   end
 
   def someone_won?
-    !!board.winning_marker
+    !!winning_marker
   end
 
   def clear_screen_and_display_board
@@ -260,12 +254,17 @@ class TTTGame
   end
 
   def computer_moves
-    computer.mark_square(board, board.unmarked_keys.sample)
+    square = at_risk_square
+    if square
+      computer.mark_square(board, square)
+    else
+      computer.mark_square(board, board.unmarked_keys.sample)
+    end
   end
 
   def find_winner_and_display_result
     clear_screen_and_display_board
-    case board.winning_marker
+    case winning_marker
     when HUMAN_MARKER then puts "You won!"
     when COMPUTER_MARKER then puts "Computer won!"
     else
@@ -274,7 +273,7 @@ class TTTGame
   end
 
   def update_winner_scorecard
-    case board.winning_marker
+    case winning_marker
     when HUMAN_MARKER then human.add_point
     when COMPUTER_MARKER then computer.add_point
     end
@@ -327,14 +326,38 @@ class TTTGame
 
   def display_match_score_and_winner
     puts 'The final score was: '
-    puts "\t#{human.name}: #{human.scorecard.total}"
-    puts "\t#{computer.name}: #{computer.scorecard.total}"
+    print "#{human.name}: #{human.scorecard.total} - "
+    puts "#{computer.name}: #{computer.scorecard.total}"
 
     if human.won_match?
       puts "#{human.name} wins!"
     else
       puts "#{computer.name} wins."
     end
+  end
+
+  def at_risk_square
+    square = nil
+    WINNING_COMBOS.each do |line|
+      squares = board.values_at(*line)
+      if squares.map{ |sq| sq.marker }.count(HUMAN_MARKER) == 2
+        space_index = squares.map do |sq| 
+          sq.marker 
+        end.index(Square::INITIAL_MARKER)
+        square = line[space_index] if space_index
+      end
+    end
+    square
+  end
+
+  def winning_marker
+    WINNING_COMBOS.each do |combo|
+      squares = board.values_at(*combo)
+      if board.three_identical_markers?(squares)
+        return squares.first.marker
+      end
+    end
+    nil
   end
 
   def reset_match_scores
