@@ -1,22 +1,22 @@
 require 'pry'
 
 class Scorecard
-  attr_accessor :score
+  attr_accessor :total
   def initialize(winning_score)
-    @score = 0
+    @total = 0
     @winning_score = winning_score
   end
 
   def add_point
-    self.score += 1
+    self.total += 1
   end
 
   def winner?
-    score == @winning_score
+    total == @winning_score
   end
 
   def reset
-    self.score = 0
+    self.total = 0
   end
 end
 
@@ -146,6 +146,22 @@ class Player
   def mark_square(board, square_number)
     board[square_number] = marker
   end
+
+  def reset_score
+    scorecard.rest
+  end
+
+  def add_point
+    scorecard.add_point
+  end
+
+  def won_match?
+    games_won == 5
+  end
+
+  def games_won
+    scorecard.total
+  end
 end
 
 class TTTGame
@@ -164,18 +180,18 @@ class TTTGame
     display_welcome_message
     loop do
       loop do
-        display_board
+        display_board_and_score
         single_game
-        find_winner_and_display_result
         update_winner_scorecard
-        break unless play_again? || match_won?
-        binding.pry
+        find_winner_and_display_result
+        break if match_won? || !play_again?
         reset
         display_play_again_message
       end
 
       display_match_score_and_winner
       break unless play_again?
+      display_play_again_message
       reset_match_scores
     end
     display_goodbye_message
@@ -200,8 +216,11 @@ class TTTGame
     puts 'Thanks for playing Tic Tac Toe! Goodbye!'
   end
 
-  def display_board
+  def display_board_and_score
     puts "#{human.name} is #{HUMAN_MARKER}. Computer is #{COMPUTER_MARKER}."
+    puts ''
+    puts 'Current score is:'
+    puts "#{human.name}: #{human.games_won} - #{computer.name}: #{computer.games_won}"
     board.draw
     puts ''
   end
@@ -212,7 +231,7 @@ class TTTGame
 
   def clear_screen_and_display_board
     clear_screen
-    display_board
+    display_board_and_score
   end
 
   def joinor(numbers, separator=', ', join_word='or')
@@ -256,8 +275,8 @@ class TTTGame
 
   def update_winner_scorecard
     case board.winning_marker
-    when HUMAN_MARKER then human.scorecard.add_point
-    when COMPUTER_MARKER then computer.scorecard.add_point
+    when HUMAN_MARKER then human.add_point
+    when COMPUTER_MARKER then computer.add_point
     end
   end
 
@@ -303,19 +322,24 @@ class TTTGame
   end
 
   def match_won?
-    human.scorecard.winner? || computer.scorecard.winner?
+    human.won_match? || computer.won_match?
   end
 
   def display_match_score_and_winner
     puts 'The final score was: '
-    scoreboard.each do |player, score|
-      puts "\t#{player}: #{score}"
+    puts "\t#{human.name}: #{human.scorecard.total}"
+    puts "\t#{computer.name}: #{computer.scorecard.total}"
+
+    if human.won_match?
+      puts "#{human.name} wins!"
+    else
+      puts "#{computer.name} wins."
     end
-    puts "#{scoreboard.winner_name} wins!"
   end
 
   def reset_match_scores
-    scoreboard.reset
+    human.reset_score
+    computer.reset_score
   end
 end
 
