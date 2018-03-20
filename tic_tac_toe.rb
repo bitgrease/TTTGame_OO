@@ -113,7 +113,7 @@ end
 
 class Player
   attr_reader :marker, :name, :scorecard
-  def initialize(marker, player_type={human: false})
+  def initialize(marker, player_type={ human: false })
     @marker = marker
     if player_type[:human]
       set_name
@@ -140,7 +140,7 @@ class Player
   end
 
   def reset_score
-    scorecard.rest
+    scorecard.reset
   end
 
   def add_point
@@ -164,9 +164,10 @@ class TTTGame
   attr_reader :board, :human, :computer, :current_player
   def initialize
     @board = Board.new
-    @human = Player.new(HUMAN_MARKER, {human: true})
+    @human = Player.new(HUMAN_MARKER, { human: true })
     @computer = Player.new(COMPUTER_MARKER)
     @current_player = @human
+    @rejected_play_again = false
   end
 
   def play
@@ -183,7 +184,7 @@ class TTTGame
         display_play_again_message
       end
 
-      display_match_score_and_winner
+      display_match_score_and_winner if match_won?
       break unless play_again?
       display_play_again_message
       reset_match_scores
@@ -214,7 +215,8 @@ class TTTGame
     puts "#{human.name} is #{HUMAN_MARKER}. Computer is #{COMPUTER_MARKER}."
     puts ''
     puts 'Current score is:'
-    puts "#{human.name}: #{human.games_won} - #{computer.name}: #{computer.games_won}"
+    print "#{human.name}: #{human.games_won} - "
+    puts "#{computer.name}: #{computer.games_won}"
     board.draw
     puts ''
   end
@@ -240,6 +242,11 @@ class TTTGame
   end
 
   def human_moves
+    square_number = prompt_for_square
+    human.mark_square(board, square_number)
+  end
+
+  def prompt_for_square
     square_number = nil
     print "Select a square from one of the available spaces.\n" \
           "(#{joinor(board.unmarked_keys)}): "
@@ -249,8 +256,7 @@ class TTTGame
       print "Invalid choice. Please try again\n" \
            "Choose from the following list (#{joinor(board.unmarked_keys)}): "
     end
-
-    human.mark_square(board, square_number)
+    square_number
   end
 
   def computer_moves
@@ -284,6 +290,7 @@ class TTTGame
   end
 
   def play_again?
+    return false if @rejected_play_again
     answer = nil
     loop do
       print 'Do you want to play again (y/n)? '
@@ -292,6 +299,7 @@ class TTTGame
       puts 'You must answer with a y or n.'
     end
 
+    @rejected_play_again = true if answer == 'n'
     answer == 'y'
   end
 
@@ -331,8 +339,10 @@ class TTTGame
 
     if human.won_match?
       puts "#{human.name} wins!"
-    else
+    elsif computer.won_match?
       puts "#{computer.name} wins."
+    else
+      puts "The match didn't complete. No winner."
     end
   end
 
@@ -340,10 +350,8 @@ class TTTGame
     square = nil
     WINNING_COMBOS.each do |line|
       squares = board.values_at(*line)
-      if squares.map{ |sq| sq.marker }.count(HUMAN_MARKER) == 2
-        space_index = squares.map do |sq| 
-          sq.marker 
-        end.index(Square::INITIAL_MARKER)
+      if squares.map(&:marker).count(HUMAN_MARKER) == 2
+        space_index = squares.map(&:marker).index(Square::INITIAL_MARKER)
         square = line[space_index] if space_index
       end
     end
