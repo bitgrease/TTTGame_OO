@@ -112,27 +112,11 @@ class Square
 end
 
 class Player
-  attr_reader :marker, :name, :scorecard
-  def initialize(marker, player_type={ human: false })
+  attr_reader :marker, :name
+  def initialize(name, marker)
     @marker = marker
-    if player_type[:human]
-      set_name
-    else
-      @name = 'Computer'
-    end
-
-    @scorecard = Scorecard.new(5)
-  end
-
-  def set_name
-    name = nil
-    loop do
-      print "What's your name?: "
-      name = gets.chomp
-      break unless name =~ /[^a-z|0-9]/i || name.empty?
-      puts "Sorry, you must enter a valid name (alphanumeric chars only)."
-    end
     @name = name
+    @scorecard = Scorecard.new(5)
   end
 
   def mark_square(board, square_number)
@@ -140,11 +124,11 @@ class Player
   end
 
   def reset_score
-    scorecard.reset
+    @scorecard.reset
   end
 
   def add_point
-    scorecard.add_point
+    @scorecard.add_point
   end
 
   def won_match?
@@ -152,22 +136,61 @@ class Player
   end
 
   def games_won
-    scorecard.total
+    @scorecard.total
   end
 end
 
 class TTTGame
-  HUMAN_MARKER = 'X'
-  COMPUTER_MARKER = 'O'
+  COMPUTER_NAMES = %w[Computer Hal iRoomba]
+  MARKERS = %w[X O]
   WINNING_COMBOS = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [1, 4, 7],
                     [2, 5, 8], [3, 6, 9], [1, 5, 9], [3, 5, 7]]
   attr_reader :board, :human, :computer, :current_player
   def initialize
     @board = Board.new
-    @human = Player.new(HUMAN_MARKER, { human: true })
-    @computer = Player.new(COMPUTER_MARKER)
+    @human ||= Player.new(select_player_name({ human: true }), select_marker)
+    @computer = Player.new(select_player_name, select_marker({ human: false }))
     @current_player = @human
     @rejected_play_again = false
+  end
+
+  def select_player_name(player_type={ human: false })
+    name = nil
+    if player_type[:human]
+      loop do
+        print "What's your name?: "
+        name = gets.chomp
+        break unless name =~ /[^a-z|0-9]/i || name.empty?
+        puts "Sorry, you must enter a valid name (alphanumeric chars only)."
+      end
+    else
+      name = COMPUTER_NAMES.sample
+    end
+    name
+  end
+
+  def select_marker(player_type={ human: true })
+    marker = nil
+    if player_type[:human]
+      loop do
+        print "Please select a mark to use #{joinor(MARKERS)}: "
+        marker = gets.chomp.upcase
+        break if MARKERS.include?(marker)
+        puts "Sorry, you must enter a valid marker."
+      end
+    else
+      begin
+        marker = if human.marker == MARKERS.first
+                   MARKERS.last
+                 else
+                   MARKERS.first
+                 end
+      rescue StandardError
+        @human = Player.new(select_player_name({ human: true }), select_marker)
+        retry
+      end
+    end
+    marker
   end
 
   def play
@@ -212,7 +235,8 @@ class TTTGame
   end
 
   def display_board_and_score
-    puts "#{human.name} is #{HUMAN_MARKER}. Computer is #{COMPUTER_MARKER}."
+    print "#{human.name} is #{human.marker}. "
+    puts "#{computer.name} is #{computer.marker}."
     puts ''
     puts 'Current score is:'
     print "#{human.name}: #{human.games_won} - "
@@ -260,9 +284,11 @@ class TTTGame
   end
 
   def computer_moves
-    square = at_risk_square
-    if square
-      computer.mark_square(board, square)
+    square_idx = computer_offense_square || computer_defense_square
+    square_idx ||= 5 if board.square_available?(5)
+
+    if square_idx
+      computer.mark_square(board, square_idx)
     else
       computer.mark_square(board, board.unmarked_keys.sample)
     end
@@ -271,8 +297,8 @@ class TTTGame
   def find_winner_and_display_result
     clear_screen_and_display_board
     case winning_marker
-    when HUMAN_MARKER then puts "You won!"
-    when COMPUTER_MARKER then puts "Computer won!"
+    when human.marker then puts "You won!"
+    when computer.marker then puts "Computer won!"
     else
       puts "It's a TIE."
     end
@@ -280,8 +306,8 @@ class TTTGame
 
   def update_winner_scorecard
     case winning_marker
-    when HUMAN_MARKER then human.add_point
-    when COMPUTER_MARKER then computer.add_point
+    when human.marker then human.add_point
+    when computer.marker then computer.add_point
     end
   end
 
@@ -325,7 +351,7 @@ class TTTGame
   end
 
   def human_turn?
-    current_player.marker == HUMAN_MARKER
+    current_player.marker == human.marker
   end
 
   def match_won?
@@ -334,8 +360,8 @@ class TTTGame
 
   def display_match_score_and_winner
     puts 'The final score was: '
-    print "#{human.name}: #{human.scorecard.total} - "
-    puts "#{computer.name}: #{computer.scorecard.total}"
+    print "#{human.name}: #{human.games_won} - "
+    puts "#{computer.name}: #{computer.games_won}"
 
     if human.won_match?
       puts "#{human.name} wins!"
@@ -347,15 +373,35 @@ class TTTGame
   end
 
   def at_risk_square
-    square = nil
+    square_idx = nil
     WINNING_COMBOS.each do |line|
       squares = board.values_at(*line)
-      if squares.map(&:marker).count(HUMAN_MARKER) == 2
-        space_index = squares.map(&:marker).index(Square::INITIAL_MARKER)
-        square = line[space_index] if space_index
+      if squares.map(&:marker).count(human.marker) == 2
+        empty_square = squares.map(&:marker).index(Square::INITIAL_MARKER)
+        square_idx = line[empty_square] if empty_square
       end
     end
-    square
+    square_idx
+  end
+
+  def square_to_complete_line(marker)
+    square_idx = nil
+    WINNING_COMBOS.each do |line|
+      squares = board.values_at(*line)
+      if squares.map(&:marker).count(marker) == 2
+        empty_square = squares.map(&:marker).index(Square::INITIAL_MARKER)
+        square_idx = line[empty_square] if empty_square
+      end
+    end
+    square_idx
+  end
+
+  def computer_defense_square
+    square_to_complete_line(human.marker)
+  end
+
+  def computer_offense_square
+    square_to_complete_line(computer.marker)
   end
 
   def winning_marker
