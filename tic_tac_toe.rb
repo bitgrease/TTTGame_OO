@@ -169,28 +169,38 @@ class TTTGame
     name
   end
 
-  def select_marker(player_type={ human: true })
+  def player_marker_selection
     marker = nil
-    if player_type[:human]
-      loop do
-        print "Please select a mark to use #{joinor(MARKERS)}: "
-        marker = gets.chomp.upcase
-        break if MARKERS.include?(marker)
-        puts "Sorry, you must enter a valid marker."
-      end
-    else
-      begin
-        marker = if human.marker == MARKERS.first
-                   MARKERS.last
-                 else
-                   MARKERS.first
-                 end
-      rescue StandardError
-        @human = Player.new(select_player_name({ human: true }), select_marker)
-        retry
-      end
+    loop do
+      print "Please select a mark to use #{joinor(MARKERS)}: "
+      marker = gets.chomp.upcase
+      break if MARKERS.include?(marker)
+      puts "Sorry, you must enter a valid marker."
     end
     marker
+  end
+
+  def computer_marker_selection
+    marker = nil
+    begin
+      marker = if human.marker == MARKERS.first
+                 MARKERS.last
+               else
+                 MARKERS.first
+               end
+    rescue StandardError
+      @human = Player.new(select_player_name({ human: true }), select_marker)
+      retry
+    end
+    marker
+  end
+
+  def select_marker(player_type={ human: true })
+    if player_type[:human]
+      player_marker_selection
+    else
+      computer_marker_selection
+    end
   end
 
   def play
@@ -198,26 +208,30 @@ class TTTGame
     display_welcome_message
     loop do
       loop do
-        display_board_and_score
-        single_game
-        update_winner_scorecard
-        find_winner_and_display_result
+        play_and_score_single_game
         break if match_won? || !play_again?
-        reset
+        reset_board
         display_play_again_message
       end
 
       display_match_score_and_winner if match_won?
       break unless play_again?
       display_play_again_message
-      reset_match_scores
+      reset_match_scores_and_board
     end
     display_goodbye_message
   end
 
   private
 
-  def single_game
+  def play_and_score_single_game
+    clear_screen
+    display_board_and_score
+    play_one_game
+    find_winner_and_display_result
+  end
+
+  def play_one_game
     loop do
       current_player_moves
       break if someone_won? || board.full?
@@ -234,13 +248,21 @@ class TTTGame
     puts 'Thanks for playing Tic Tac Toe! Goodbye!'
   end
 
-  def display_board_and_score
+  def display_name_and_marks
     print "#{human.name} is #{human.marker}. "
     puts "#{computer.name} is #{computer.marker}."
     puts ''
-    puts 'Current score is:'
+  end
+
+  def display_match_score
+    puts 'Match Score:'
     print "#{human.name}: #{human.games_won} - "
     puts "#{computer.name}: #{computer.games_won}"
+  end
+
+  def display_board_and_score
+    display_name_and_marks
+    display_match_score
     board.draw
     puts ''
   end
@@ -295,12 +317,13 @@ class TTTGame
   end
 
   def find_winner_and_display_result
+    update_winner_scorecard
     clear_screen_and_display_board
     case winning_marker
-    when human.marker then puts "You won!"
-    when computer.marker then puts "Computer won!"
+    when human.marker then puts "You won this game!"
+    when computer.marker then puts "Computer won this game!"
     else
-      puts "It's a TIE."
+      puts "This game is a TIE."
     end
   end
 
@@ -329,7 +352,7 @@ class TTTGame
     answer == 'y'
   end
 
-  def reset
+  def reset_board
     board.reset
     @current_player = human
     clear_screen
@@ -359,17 +382,9 @@ class TTTGame
   end
 
   def display_match_score_and_winner
-    puts 'The final score was: '
-    print "#{human.name}: #{human.games_won} - "
-    puts "#{computer.name}: #{computer.games_won}"
-
-    if human.won_match?
-      puts "#{human.name} wins!"
-    elsif computer.won_match?
-      puts "#{computer.name} wins."
-    else
-      puts "The match didn't complete. No winner."
-    end
+    display_match_score
+    winner_name = human.won_match? ? human.name : computer.name
+    puts "#{winner_name} wins the match!"
   end
 
   def at_risk_square
@@ -417,6 +432,7 @@ class TTTGame
   def reset_match_scores
     human.reset_score
     computer.reset_score
+    reset_board
   end
 end
 
