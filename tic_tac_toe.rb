@@ -1,8 +1,8 @@
 class Scorecard
+  WINNING_SCORE = 5
   attr_accessor :total
-  def initialize(winning_score)
+  def initialize
     @total = 0
-    @winning_score = winning_score
   end
 
   def add_point
@@ -10,7 +10,7 @@ class Scorecard
   end
 
   def winner?
-    total == @winning_score
+    total == WINNING_SCORE
   end
 
   def reset
@@ -93,11 +93,11 @@ class Square
   end
 
   def to_s
-    @marker
+    marker
   end
 
   def unmarked?
-    @marker == INITIAL_MARKER
+    marker == INITIAL_MARKER
   end
 
   def marked?
@@ -110,7 +110,7 @@ class Player
   def initialize(name, marker)
     @marker = marker
     @name = name
-    @scorecard = Scorecard.new(5)
+    @scorecard = Scorecard.new
   end
 
   def mark_square(board, square_number)
@@ -126,7 +126,7 @@ class Player
   end
 
   def won_match?
-    games_won == 5
+    games_won == Scorecard::WINNING_SCORE
   end
 
   def games_won
@@ -236,6 +236,8 @@ class TTTGame
   def display_welcome_message
     puts 'Welcome to Tic Tac Toe!'
     puts ''
+    puts "First Player to #{Scorecard::WINNING_SCORE} wins!"
+    sleep 2
   end
 
   def display_goodbye_message
@@ -249,7 +251,7 @@ class TTTGame
   end
 
   def display_match_score
-    puts 'Match Score:'
+    puts"Match Score (win #{Scorecard::WINNING_SCORE} to win the match)."
     print "#{human.name}: #{human.games_won} - "
     puts "#{computer.name}: #{computer.games_won}"
   end
@@ -423,7 +425,7 @@ class TTTGame
     nil
   end
 
-  def reset_match_scores
+  def reset_match_scores_and_board
     human.reset_score
     computer.reset_score
     reset_board
