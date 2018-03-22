@@ -1,5 +1,3 @@
-require 'pry'
-
 class Scorecard
   attr_accessor :total
   def initialize(winning_score)
