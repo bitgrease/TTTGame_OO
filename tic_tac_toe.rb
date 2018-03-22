@@ -50,10 +50,6 @@ class Board
     @squares.keys.select { |key| @squares[key].unmarked? }
   end
 
-  def someone_won?
-    !!winner
-  end
-
   def draw
     row_separator = '-----+-----+-----'
     row_bottom_border = '     |     |'
@@ -152,6 +148,27 @@ class TTTGame
     @rejected_play_again = false
   end
 
+  def play
+    clear_screen
+    display_welcome_message
+    loop do
+      loop do
+        play_and_score_single_game
+        break if match_won? || !play_again?
+        reset_board
+        display_play_again_message
+      end
+
+      display_match_score_and_winner if match_won?
+      break unless play_again?
+      display_play_again_message
+      reset_match_scores_and_board
+    end
+    display_goodbye_message
+  end
+
+  private
+
   def select_player_name(player_type={ human: false })
     name = nil
     if player_type[:human]
@@ -200,27 +217,6 @@ class TTTGame
       computer_marker_selection
     end
   end
-
-  def play
-    clear_screen
-    display_welcome_message
-    loop do
-      loop do
-        play_and_score_single_game
-        break if match_won? || !play_again?
-        reset_board
-        display_play_again_message
-      end
-
-      display_match_score_and_winner if match_won?
-      break unless play_again?
-      display_play_again_message
-      reset_match_scores_and_board
-    end
-    display_goodbye_message
-  end
-
-  private
 
   def play_and_score_single_game
     clear_screen
